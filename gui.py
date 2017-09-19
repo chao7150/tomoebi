@@ -76,10 +76,9 @@ class MyWindow(QWidget):
                 self.auth = json.load(f)
             accounts = list(self.auth["Twitter"].keys())
             accounts.extend(list(self.auth["Mastodon"].keys()))
-            self.twitter_apis = []
-            for t in self.auth["Twitter"].keys():
-                auth = tweepy.OAuthHandler(profile.CONSUMER_KEY, profile.CONSUMER_SECRET)
-                auth.set_access_token(self.auth["Twitter"]["PainEchos"]["ACCESS_TOKEN"], self.auth["Twitter"]["PainEchos"]["ACCESS_SECRET"])
+            self.twitter_apis = {}
+            for t in self.auth["Twitter"].values():
+                twitter.connect(self.auth["Twitter"])
         else:
             default = {
                     "Twitter"  : {},

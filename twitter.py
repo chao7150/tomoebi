@@ -8,6 +8,10 @@ import json
 import os
 import requests
 
+def connect():
+    auth = tweepy.OAuthHandler(profile.CONSUMER_KEY, profile.CONSUMER_SECRET)
+    auth.set_access_token(self.auth["Twitter"][""]["ACCESS_TOKEN"], self.auth["Twitter"][""]["ACCESS_SECRET"])
+
 def authentication():
     #app = QApplication(sys.argv)
 
@@ -39,12 +43,6 @@ def authentication():
         json.dump(authkeys, f, indent=2)
 
 def geticon(auth):
-    auth = tweepy.OAuthHandler(profile.CONSUMER_KEY, profile.CONSUMER_SECRET)
-    base = os.path.dirname(os.path.abspath(__file__))
-    name = os.path.normpath(os.path.join(base, '../auth.json'))
-    with open(name, 'r') as f:
-        keys = json.load(f)
-    auth.set_access_token(keys["Twitter"]["PainEchos"]["ACCESS_TOKEN"], keys["Twitter"]["PainEchos"]["ACCESS_SECRET"])
     api = tweepy.API(auth)
     url = api.me().profile_image_url_https
 
