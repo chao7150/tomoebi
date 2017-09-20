@@ -10,8 +10,8 @@ import twitter
 class MyWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.auths = []
-        self.screen_names = []
+        self.auths = {}
+        self.activeaccounts = []
 
         self.init_main()
         self.init_accounts()
@@ -36,8 +36,12 @@ class MyWindow(QWidget):
         self.compose_vbox = QVBoxLayout()
         self.accounts_hbox = QHBoxLayout()
         self.accountButtons = []
-        for a in self.screen_names:
+        for a in self.auths.keys():
             accountButton = QPushButton(self)
+            accountButton.setWhatsThis(a)
+            print(accountButton.whatsThis())
+            accountButton.setCheckable(True)
+            accountButton.toggled.connect(self.chooseaccount)
             accountButton.setIcon(PyQt5.QtGui.QIcon('images/'+a+'.jpg'))
             accountButton.setIconSize(QSize(48, 48))
             self.accounts_hbox.addWidget(accountButton)
@@ -75,7 +79,7 @@ class MyWindow(QWidget):
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.inner)
 
-        #integrate upper and lower part of mwin window
+        #integrate upper and lower part of main window
         self.whole_vbox = QVBoxLayout()
         self.whole_vbox.addLayout(self.compose_vbox)
         self.whole_vbox.addWidget(self.scroll)
@@ -89,9 +93,8 @@ class MyWindow(QWidget):
             with open('auth.json', 'r') as f:
                 authdic = json.load(f)
             for k, v in authdic["Twitter"].items():
-                self.screen_names.append(k)
                 api = twitter.connect(v["ACCESS_TOKEN"], v["ACCESS_SECRET"])
-                self.auths.append(api)
+                self.auths[k] = api
                 if not os.path.isfile("images/"+k+".jpg"):
                     twitter.geticon(api, k)
 
@@ -106,13 +109,23 @@ class MyWindow(QWidget):
 
     def addaccount(self):
         api, screen_name = twitter.authentication()
-        self.auths.append(api)
-        self.screen_names.append(screen_name)
+        self.auths[screen_name] = api
         twitter.geticon(api, screen_name)
         accountButton = QPushButton(self)
+        accountButton.setWhatsThis(screen_name)
+        accountButton.setCheckable(True)
+        accountButton.toggled.connect(self.chooseaccount)
         accountButton.setIcon(PyQt5.QtGui.QIcon('images/'+screen_name+'.jpg'))
         accountButton.setIconSize(QSize(48, 48))
         self.accounts_hbox.insertWidget(self.accounts_hbox.count() - 1, accountButton)
+
+    def chooseaccount(self):
+        acc = self.sender()
+        if acc.isChecked():
+            self.activeaccounts.append(acc.whatsThis())
+        else:
+            self.activeaccounts.remove(acc.whatsThis())
+        print(self.activeaccounts)
 
     def update_timeline(self, text):
         l = QTextEdit(self)
@@ -122,7 +135,8 @@ class MyWindow(QWidget):
 
     def submit(self):
         submittext = self.composer.toPlainText()
-        self.update_timeline(submittext)
+        for a in self.activeaccounts:
+            self.auths[a].update_status(submittext)
         self.composer.setPlainText("")
 
 if __name__ == '__main__':
