@@ -1,17 +1,23 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys, os , json
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+import sys
+import os
+import json
+from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+                             QPushButton, QTextEdit, QScrollArea)
+from PyQt5.QtCore import QTimer, QSize
 import PyQt5.QtGui
 import twitter
 
 class MyWindow(QWidget):
+    """main window"""
     def __init__(self):
         super().__init__()
         self.auths = {}
         self.activeaccounts = []
+        self.streams = []
+        self.tweets = []
 
         self.init_main()
         self.init_accounts()
@@ -21,59 +27,58 @@ class MyWindow(QWidget):
         self.show()
         sys.exit(app.exec_())
 
-    #options of main window
     def init_main(self):
+        """options of main window"""
         self.setGeometry(300, 100, 300, 500)
         self.setWindowTitle("tomoebi")
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_timeline)
+        self.timer.start(500)
 
-    #create test tweets
     def init_tweets(self):
-        self.tweets = ["one", "two", "three"]
+        """create initial tweet"""
+        self.tweets = ["start"]
 
     #initialize widgets
     def init_widgets(self):
+        """initialize widgets"""
         #upper half of main window consists of accounts, composer and buttons
         self.compose_vbox = QVBoxLayout()
         self.accounts_hbox = QHBoxLayout()
-        self.accountButtons = []
-        for a in self.auths.keys():
-            accountButton = QPushButton(self)
-            accountButton.setWhatsThis(a)
-            print(accountButton.whatsThis())
-            accountButton.setCheckable(True)
-            accountButton.toggled.connect(self.chooseaccount)
-            accountButton.setIcon(PyQt5.QtGui.QIcon('images/'+a+'.jpg'))
-            accountButton.setIconSize(QSize(48, 48))
-            self.accounts_hbox.addWidget(accountButton)
-        self.addAccountButton = QPushButton("+", self)
-        self.addAccountButton.clicked.connect(self.addaccount)
-        self.accounts_hbox.addWidget(self.addAccountButton)
+        self.accbuttons = []
+        for a in self.auths:
+            accbutton = QPushButton(self)
+            accbutton.setWhatsThis(a)
+            accbutton.setCheckable(True)
+            accbutton.toggled.connect(self.choose_account)
+            accbutton.setIcon(PyQt5.QtGui.QIcon('images/'+a+'.jpg'))
+            accbutton.setIconSize(QSize(48, 48))
+            self.accounts_hbox.addWidget(accbutton)
+        self.addaccbutton = QPushButton("+", self)
+        self.addaccbutton.clicked.connect(self.add_account)
+        self.accounts_hbox.addWidget(self.addaccbutton)
         self.composer = QTextEdit(self)
         self.composer.setPlaceholderText("いまなにしてる？")
         self.composer.setMaximumHeight(100)
 
         self.compose_hbox = QHBoxLayout()
-        self.imageButton = QPushButton("image", self)
-        self.submitButton = QPushButton("tweet", self)
-        self.submitButton.clicked.connect(self.submit)
+        self.imagebutton = QPushButton("image", self)
+        self.submitbutton = QPushButton("tweet", self)
+        self.submitbutton.clicked.connect(self.submit)
 
-        self.compose_hbox.addWidget(self.imageButton)
-        self.compose_hbox.addWidget(self.submitButton)
+        self.compose_hbox.addWidget(self.imagebutton)
+        self.compose_hbox.addWidget(self.submitbutton)
         self.compose_vbox.addLayout(self.accounts_hbox)
         self.compose_vbox.addWidget(self.composer)
         self.compose_vbox.addLayout(self.compose_hbox)
 
         #lower half of main window consists of timeline
-        self.tweetboxes = []
-        for t in self.tweets:
-            l = QTextEdit(self)
-            l.setPlainText(t)
-            l.setReadOnly(True)
-            self.tweetboxes.append(l)
+        l = QTextEdit()
+        l.setPlainText(self.tweets[0])
+        l.setReadOnly(True)
         self.inner = QWidget()
         self.timeline_vbox = QVBoxLayout(self.inner)
-        for tbox in reversed(self.tweetboxes):
-            self.timeline_vbox.addWidget(tbox)
+        self.timeline_vbox.addWidget(l)
         self.timeline_vbox.addStretch()
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -87,6 +92,7 @@ class MyWindow(QWidget):
 
     #initialize registered accounts
     def init_accounts(self):
+        """load account AT and AS from local and create api object and stream"""
         if not os.path.exists("images"):
             os.mkdir("images")
         if os.path.isfile("auth.json"):
@@ -95,49 +101,69 @@ class MyWindow(QWidget):
             for k, v in authdic["Twitter"].items():
                 api = twitter.connect(v["ACCESS_TOKEN"], v["ACCESS_SECRET"])
                 self.auths[k] = api
+                self.streams.append(twitter.openstream(api, self.receive_tweet))
                 if not os.path.isfile("images/"+k+".jpg"):
                     twitter.geticon(api, k)
 
         else:
             default = {
-                    "Twitter"  : {},
-                    "Mastodon" : {}
+                "Twitter"  : {},
+                "Mastodon" : {}
             }
             with open('auth.json', 'w') as f:
                 json.dump(default, f, indent=2)
             self.authdic = {}
 
-    def addaccount(self):
+    def add_account(self):
+        """add account and register it to local file"""
         api, screen_name = twitter.authentication()
         self.auths[screen_name] = api
+        self.streams.append(twitter.openstream(api, self.receive_tweet))
         twitter.geticon(api, screen_name)
-        accountButton = QPushButton(self)
-        accountButton.setWhatsThis(screen_name)
-        accountButton.setCheckable(True)
-        accountButton.toggled.connect(self.chooseaccount)
-        accountButton.setIcon(PyQt5.QtGui.QIcon('images/'+screen_name+'.jpg'))
-        accountButton.setIconSize(QSize(48, 48))
-        self.accounts_hbox.insertWidget(self.accounts_hbox.count() - 1, accountButton)
+        accbutton = QPushButton(self)
+        accbutton.setWhatsThis(screen_name)
+        accbutton.setCheckable(True)
+        accbutton.toggled.connect(self.choose_account)
+        accbutton.setIcon(PyQt5.QtGui.QIcon('images/'+screen_name+'.jpg'))
+        accbutton.setIconSize(QSize(48, 48))
+        self.accounts_hbox.insertWidget(self.accounts_hbox.count() - 1, accbutton)
 
-    def chooseaccount(self):
+    def choose_account(self):
+        """
+        called when accbutton are toggled.
+        add or remove active accounts
+        """
         acc = self.sender()
         if acc.isChecked():
             self.activeaccounts.append(acc.whatsThis())
         else:
             self.activeaccounts.remove(acc.whatsThis())
-        print(self.activeaccounts)
 
-    def update_timeline(self, text):
-        l = QTextEdit(self)
-        l.setPlainText(text)
-        l.setReadOnly(True)
-        self.timeline_vbox.insertWidget(0, l)
+    def receive_tweet(self, text):
+        """called when stream receive a tweet"""
+        self.tweets.append(text)
+
+    def update_timeline(self):
+        """called every 500ms and update gui timeline according to self.tweets"""
+        for t in self.tweets:
+            l = QTextEdit()
+            l.setPlainText(t)
+            l.setReadOnly(True)
+            self.timeline_vbox.insertWidget(0, l)
+        self.tweets = []
 
     def submit(self):
+        """called when tweet button is pressed and submit tweet"""
         submittext = self.composer.toPlainText()
         for a in self.activeaccounts:
             self.auths[a].update_status(submittext)
         self.composer.setPlainText("")
+
+    def closeEvent(self, event):
+        """called when gui window is closed and terminate all streams and thread"""
+        for s in self.streams:
+            s.disconnect()
+        os._exit(1)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
