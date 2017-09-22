@@ -14,7 +14,7 @@ class StreamListener(tweepy.StreamListener):
 
     def on_status(self, status):
         """send tweets to main gui"""
-        self.callback(status.text)
+        self.callback(status)
 
     def on_error(self, status_code):
         """print error code when receive error"""
@@ -79,6 +79,11 @@ def geticon(api, screen_name):
     imagename = 'images/' + screen_name + '.jpg'
     with open(imagename, 'wb') as f:
         f.write(image)
+    
+def getimage(url):
+    response = requests.get(url, allow_redirects=False)
+    image = response.content
+    return image
 
 if __name__ == "__main__":
     authentication()
