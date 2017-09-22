@@ -5,8 +5,8 @@ import sys
 import os
 import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QTextEdit, QScrollArea)
-from PyQt5.QtCore import QTimer, QSize
+                             QPushButton, QTextEdit, QScrollArea, QLabel)
+from PyQt5.QtCore import QTimer, QSize, QByteArray
 import PyQt5.QtGui
 import twitter
 
@@ -29,7 +29,7 @@ class MyWindow(QWidget):
 
     def init_main(self):
         """options of main window"""
-        self.setGeometry(300, 100, 300, 500)
+        self.setGeometry(300, 100, 300, 650)
         self.setWindowTitle("tomoebi")
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_timeline)
@@ -43,6 +43,7 @@ class MyWindow(QWidget):
     def init_widgets(self):
         """initialize widgets"""
         #upper half of main window consists of accounts, composer and buttons
+        self.imageviewer = QLabel()
         self.compose_vbox = QVBoxLayout()
         self.accounts_hbox = QHBoxLayout()
         self.accbuttons = []
@@ -58,7 +59,7 @@ class MyWindow(QWidget):
         self.addaccbutton.clicked.connect(self.add_account)
         self.accounts_hbox.addWidget(self.addaccbutton)
         self.composer = QTextEdit(self)
-        self.composer.setPlaceholderText("いまなにしてる？")
+        #self.composer.setPlaceholderText("いまなにしてる？")
         self.composer.setMaximumHeight(100)
 
         self.compose_hbox = QHBoxLayout()
@@ -68,6 +69,7 @@ class MyWindow(QWidget):
 
         self.compose_hbox.addWidget(self.imagebutton)
         self.compose_hbox.addWidget(self.submitbutton)
+        self.compose_vbox.addWidget(self.imageviewer)
         self.compose_vbox.addLayout(self.accounts_hbox)
         self.compose_vbox.addWidget(self.composer)
         self.compose_vbox.addLayout(self.compose_hbox)
@@ -79,6 +81,7 @@ class MyWindow(QWidget):
         self.inner = QWidget()
         self.timeline_vbox = QVBoxLayout(self.inner)
         self.timeline_vbox.addWidget(l)
+        self.tweets = []
         self.timeline_vbox.addStretch()
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -139,18 +142,28 @@ class MyWindow(QWidget):
         else:
             self.activeaccounts.remove(acc.whatsThis())
 
-    def receive_tweet(self, text):
+    def receive_tweet(self, status):
         """called when stream receive a tweet"""
-        self.tweets.append(text)
+        self.tweets.append(status)
 
     def update_timeline(self):
         """called every 500ms and update gui timeline according to self.tweets"""
         for t in self.tweets:
-            l = QTextEdit()
-            l.setPlainText(t)
-            l.setReadOnly(True)
-            self.timeline_vbox.insertWidget(0, l)
+            tweet = self.create_tweet(t)
+            self.timeline_vbox.insertWidget(0, tweet)
+            if "media" in t.entities:
+                image = twitter.getimage(t.entities["media"][0]["media_url_https"])
+                pixmap = PyQt5.QtGui.QPixmap()
+                pixmap.loadFromData(QByteArray(image))
+                self.imageviewer.setPixmap(pixmap)
         self.tweets = []
+    
+    def create_tweet(self, t):
+        text = "@" + t.user.screen_name + "\n" + t.text      
+        tweettext = QTextEdit()
+        tweettext.setPlainText(text)
+        tweettext.setReadOnly(True)
+        return tweettext
 
     def submit(self):
         """called when tweet button is pressed and submit tweet"""
