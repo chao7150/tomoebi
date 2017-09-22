@@ -8,13 +8,14 @@ from PyQt5.QtWidgets import QInputDialog
 
 class StreamListener(tweepy.StreamListener):
     """receive streaming and classify messages"""
-    def __init__(self, callback):
+    def __init__(self, name, callback):
         super(StreamListener, self).__init__()
         self.callback = callback
+        self.name = name
 
     def on_status(self, status):
         """send tweets to main gui"""
-        self.callback(status)
+        self.callback(status, self.name)
 
     def on_error(self, status_code):
         """print error code when receive error"""
@@ -23,12 +24,12 @@ class StreamListener(tweepy.StreamListener):
             print(str(status_code))
             return False
 
-def openstream(api, callback):
+def openstream(api, callback, name):
     """
     create and start stream with async mode which enables parallel
     processing of gui event loop and stream wait loop
     """
-    stream = tweepy.Stream(auth=api.auth, listener=StreamListener(callback))
+    stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback))
     stream.userstream(async=True)
     return stream
 
@@ -80,10 +81,14 @@ def geticon(api, screen_name):
     with open(imagename, 'wb') as f:
         f.write(image)
     
-def getimage(url):
-    response = requests.get(url, allow_redirects=False)
-    image = response.content
-    return image
+def get_allimages(api, id):
+    status = api.get_status(id)
+    images = []
+    for i in status.extended_entities["media"]:
+        url = i["media_url_https"]
+        response = requests.get(url, allow_redirects=False)
+        images.append(response.content)
+    return images
 
 if __name__ == "__main__":
     authentication()

@@ -5,10 +5,13 @@ import sys
 import os
 import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QTextEdit, QScrollArea, QLabel)
+                             QGridLayout, QPushButton, QTextEdit, QScrollArea,
+                             QLabel)
 from PyQt5.QtCore import QTimer, QSize, QByteArray
 import PyQt5.QtGui
 import twitter
+
+GRID_ORDER = [(0, 0), (0, 1), (1, 0), (1, 1)]
 
 class MyWindow(QWidget):
     """main window"""
@@ -29,7 +32,7 @@ class MyWindow(QWidget):
 
     def init_main(self):
         """options of main window"""
-        self.setGeometry(300, 100, 300, 650)
+        self.setGeometry(300, 100, 1600, 900)
         self.setWindowTitle("tomoebi")
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_timeline)
@@ -91,7 +94,19 @@ class MyWindow(QWidget):
         self.whole_vbox = QVBoxLayout()
         self.whole_vbox.addLayout(self.compose_vbox)
         self.whole_vbox.addWidget(self.scroll)
-        self.setLayout(self.whole_vbox)
+
+        #right half of the main window
+        self.image_collumn = QVBoxLayout()
+        self.imagegrid = QGridLayout()
+        self.imagetext = QTextEdit()
+        self.imagetext.setReadOnly(True)
+        self.image_collumn.addWidget(self.imagetext)
+        self.image_collumn.addLayout(self.imagegrid)
+
+        self.whole_hbox = QHBoxLayout()
+        self.whole_hbox.addLayout(self.whole_vbox)
+        self.whole_hbox.addLayout(self.image_collumn)
+        self.setLayout(self.whole_hbox)
 
     #initialize registered accounts
     def init_accounts(self):
@@ -104,7 +119,7 @@ class MyWindow(QWidget):
             for k, v in authdic["Twitter"].items():
                 api = twitter.connect(v["ACCESS_TOKEN"], v["ACCESS_SECRET"])
                 self.auths[k] = api
-                self.streams.append(twitter.openstream(api, self.receive_tweet))
+                self.streams.append(twitter.openstream(api, self.receive_tweet, k))
                 if not os.path.isfile("images/"+k+".jpg"):
                     twitter.geticon(api, k)
 
@@ -121,7 +136,7 @@ class MyWindow(QWidget):
         """add account and register it to local file"""
         api, screen_name = twitter.authentication()
         self.auths[screen_name] = api
-        self.streams.append(twitter.openstream(api, self.receive_tweet))
+        self.streams.append(twitter.openstream(api, self.receive_tweet, screen_name))
         twitter.geticon(api, screen_name)
         accbutton = QPushButton(self)
         accbutton.setWhatsThis(screen_name)
@@ -142,20 +157,25 @@ class MyWindow(QWidget):
         else:
             self.activeaccounts.remove(acc.whatsThis())
 
-    def receive_tweet(self, status):
+    def receive_tweet(self, status, name):
         """called when stream receive a tweet"""
-        self.tweets.append(status)
+        self.tweets.append((status, name))
 
     def update_timeline(self):
         """called every 500ms and update gui timeline according to self.tweets"""
-        for t in self.tweets:
+        for t, name in self.tweets:
             tweet = self.create_tweet(t)
             self.timeline_vbox.insertWidget(0, tweet)
             if "media" in t.entities:
-                image = twitter.getimage(t.entities["media"][0]["media_url_https"])
-                pixmap = PyQt5.QtGui.QPixmap()
-                pixmap.loadFromData(QByteArray(image))
-                self.imageviewer.setPixmap(pixmap)
+                images = twitter.get_allimages(self.auths[name], t.id)
+                self.imagetext.setPlainText("@" + t.user.screen_name + "\n" + t.text)
+                for n in range(len(images)):
+                    pixmap = PyQt5.QtGui.QPixmap()
+                    pixmap.loadFromData(QByteArray(images[n]))
+                    scaled = pixmap.scaled(QSize(320, 180), 1, 1)
+                    imageviewer = QLabel()
+                    imageviewer.setPixmap(scaled)
+                    self.imagegrid.addWidget(imageviewer, GRID_ORDER[n][0], GRID_ORDER[n][1])
         self.tweets = []
     
     def create_tweet(self, t):
