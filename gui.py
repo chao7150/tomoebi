@@ -6,7 +6,7 @@ import os
 import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QGridLayout, QPushButton, QTextEdit, QScrollArea,
-                             QLabel)
+                             QLabel, QLineEdit)
 from PyQt5.QtCore import QTimer, QSize, QByteArray
 import PyQt5.QtGui
 import twitter
@@ -21,6 +21,9 @@ class MyWindow(QWidget):
         self.activeaccounts = []
         self.streams = []
         self.tweets = []
+        self.tagarray = []
+        self.tweettags = []
+        self.receivetags = []
 
         self.init_main()
         self.init_accounts()
@@ -46,7 +49,6 @@ class MyWindow(QWidget):
     def init_widgets(self):
         """initialize widgets"""
         #upper half of main window consists of accounts, composer and buttons
-        self.imageviewer = QLabel()
         self.compose_vbox = QVBoxLayout()
         self.accounts_hbox = QHBoxLayout()
         self.accbuttons = []
@@ -70,12 +72,22 @@ class MyWindow(QWidget):
         self.submitbutton = QPushButton("tweet", self)
         self.submitbutton.clicked.connect(self.submit)
 
+        self.hashtag_hbox = QHBoxLayout()
+        self.hashtagedit = QLineEdit(self)
+        self.hashtagedit.setPlaceholderText("hashtags")
+        self.hashtagbutton = QPushButton("set")
+        self.hashtagbutton.setCheckable(True)
+        self.hashtagbutton.toggled.connect(self.sethashtag)
+        self.hashtag_hbox.addWidget(self.hashtagedit)
+        self.hashtag_hbox.addWidget(self.hashtagbutton)
+
         self.compose_hbox.addWidget(self.imagebutton)
         self.compose_hbox.addWidget(self.submitbutton)
-        self.compose_vbox.addWidget(self.imageviewer)
         self.compose_vbox.addLayout(self.accounts_hbox)
         self.compose_vbox.addWidget(self.composer)
         self.compose_vbox.addLayout(self.compose_hbox)
+        self.compose_vbox.addLayout(self.hashtag_hbox)
+        
 
         #lower half of main window consists of timeline
         l = QTextEdit()
@@ -119,7 +131,7 @@ class MyWindow(QWidget):
             for k, v in authdic["Twitter"].items():
                 api = twitter.connect(v["ACCESS_TOKEN"], v["ACCESS_SECRET"])
                 self.auths[k] = api
-                self.streams.append(twitter.openstream(api, self.receive_tweet, k))
+                self.streams.append(twitter.open_userstream(api, self.receive_tweet, k))
                 if not os.path.isfile("images/"+k+".jpg"):
                     twitter.geticon(api, k)
 
@@ -136,7 +148,7 @@ class MyWindow(QWidget):
         """add account and register it to local file"""
         api, screen_name = twitter.authentication()
         self.auths[screen_name] = api
-        self.streams.append(twitter.openstream(api, self.receive_tweet, screen_name))
+        self.streams.append(twitter.open_userstream(api, self.receive_tweet, screen_name))
         twitter.geticon(api, screen_name)
         accbutton = QPushButton(self)
         accbutton.setWhatsThis(screen_name)
@@ -188,9 +200,29 @@ class MyWindow(QWidget):
     def submit(self):
         """called when tweet button is pressed and submit tweet"""
         submittext = self.composer.toPlainText()
+        for t in self.tweettags:
+            submittext = submittext + " " + t
         for a in self.activeaccounts:
             self.auths[a].update_status(submittext)
         self.composer.setPlainText("")
+
+    def sethashtag(self):
+        switch = self.sender()
+        if switch.isChecked():
+            htinput = self.hashtagedit.text()
+            htlist = htinput.strip().split()
+            for t in htlist:
+                if not t[0] == "*":
+                    self.receivetags.append(t)
+                    self.tweettags.append(t)
+                else:
+                    self.receivetags.append(t[1:])
+            print(self.receivetags)
+            print(self.tweettags)
+        else:
+            self.receivetags = []
+            self.tweettags = []
+            print(self.tagarray)
 
     def closeEvent(self, event):
         """called when gui window is closed and terminate all streams and thread"""
