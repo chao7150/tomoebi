@@ -24,7 +24,7 @@ class StreamListener(tweepy.StreamListener):
             print(str(status_code))
             return False
 
-def openstream(api, callback, name):
+def open_userstream(api, callback, name):
     """
     create and start stream with async mode which enables parallel
     processing of gui event loop and stream wait loop
@@ -32,6 +32,10 @@ def openstream(api, callback, name):
     stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback))
     stream.userstream(async=True)
     return stream
+
+def open_filterstream(api, callback, query):
+    stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback))
+    stream.filter(track=[query], async=True)
 
 def connect(accesstoken, accesssecret):
     """create api object from saved keys"""
