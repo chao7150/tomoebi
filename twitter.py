@@ -33,9 +33,10 @@ def open_userstream(api, callback, name):
     stream.userstream(async=True)
     return stream
 
-def open_filterstream(api, callback, query):
+def open_filterstream(api, callback, name, query):
     stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback))
-    stream.filter(track=[query], async=True)
+    stream.filter(track=query, async=True)
+    return stream
 
 def connect(accesstoken, accesssecret):
     """create api object from saved keys"""
@@ -74,13 +75,14 @@ def authentication():
         json.dump(authkeys, f, indent=2)
     return api, screen_name
 
-def geticon(api, screen_name):
+def getmyicon(api, screen_name):
     """get icon image with api and screen_name and save it to local"""
     url = api.me().profile_image_url_https
+    geticon(url, screen_name)
 
+def geticon(url, screen_name):
     response = requests.get(url, allow_redirects=False)
     image = response.content
-
     imagename = 'images/' + screen_name + '.jpg'
     with open(imagename, 'wb') as f:
         f.write(image)
