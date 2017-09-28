@@ -24,6 +24,8 @@ class MyWindow(QWidget):
         self.tagarray = []
         self.tweettags = []
         self.receivetags = []
+        self.following = []
+        self.searchstream = None
 
         self.init_main()
         self.init_accounts()
@@ -35,7 +37,7 @@ class MyWindow(QWidget):
 
     def init_main(self):
         """options of main window"""
-        self.setGeometry(300, 100, 1600, 900)
+        self.setGeometry(300, 100, 1000, 600)
         self.setWindowTitle("tomoebi")
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_timeline)
@@ -131,10 +133,11 @@ class MyWindow(QWidget):
             for k, v in authdic["Twitter"].items():
                 api = twitter.connect(v["ACCESS_TOKEN"], v["ACCESS_SECRET"])
                 self.auths[k] = api
+                #self.following = self.following + api.friends_ids(k)
                 self.streams.append(twitter.open_userstream(api, self.receive_tweet, k))
                 if not os.path.isfile("images/"+k+".jpg"):
-                    twitter.geticon(api, k)
-
+                    twitter.getmyicon(api, k)
+            #twitter.open_filterstream(self.auths["XXXX"], self.receive_tweet, "XXXX", [str(x) for x in self.following])
         else:
             default = {
                 "Twitter"  : {},
@@ -149,7 +152,7 @@ class MyWindow(QWidget):
         api, screen_name = twitter.authentication()
         self.auths[screen_name] = api
         self.streams.append(twitter.open_userstream(api, self.receive_tweet, screen_name))
-        twitter.geticon(api, screen_name)
+        twitter.getmyicon(api, screen_name)
         accbutton = QPushButton(self)
         accbutton.setWhatsThis(screen_name)
         accbutton.setCheckable(True)
@@ -177,7 +180,16 @@ class MyWindow(QWidget):
         """called every 500ms and update gui timeline according to self.tweets"""
         for t, name in self.tweets:
             tweet = self.create_tweet(t)
-            self.timeline_vbox.insertWidget(0, tweet)
+            if not os.path.isfile("images/" + t.user.screen_name + ".jpg"):
+                twitter.geticon(t.user.profile_image_url_https, t.user.screen_name)
+            icon = PyQt5.QtGui.QPixmap("images/" + t.user.screen_name + ".jpg")
+            scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
+            iconviewer = QLabel()
+            iconviewer.setPixmap(scaled_icon)
+            tweet_hbox = QHBoxLayout()
+            tweet_hbox.addWidget(iconviewer)
+            tweet_hbox.addWidget(tweet)
+            self.timeline_vbox.insertLayout(0, tweet_hbox)
             if "media" in t.entities:
                 images = twitter.get_allimages(self.auths[name], t.id)
                 self.imagetext.setPlainText("@" + t.user.screen_name + "\n" + t.text)
@@ -217,12 +229,13 @@ class MyWindow(QWidget):
                     self.tweettags.append(t)
                 else:
                     self.receivetags.append(t[1:])
-            print(self.receivetags)
-            print(self.tweettags)
+            repl_screen_name = list(self.auths.keys())[0]
+            print(repl_screen_name)
+            self.searchstream = twitter.open_filterstream(self.auths[repl_screen_name], self.receive_tweet, repl_screen_name, self.receivetags)
         else:
             self.receivetags = []
             self.tweettags = []
-            print(self.tagarray)
+            self.searchstream.disconnect()
 
     def closeEvent(self, event):
         """called when gui window is closed and terminate all streams and thread"""
