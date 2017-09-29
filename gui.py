@@ -6,7 +6,7 @@ import os
 import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QGridLayout, QPushButton, QTextEdit, QScrollArea,
-                             QLabel, QLineEdit)
+                             QLabel, QLineEdit, QSizePolicy)
 from PyQt5.QtCore import QTimer, QSize, QByteArray
 import PyQt5.QtGui
 import twitter
@@ -67,7 +67,7 @@ class MyWindow(QWidget):
         self.accounts_hbox.addWidget(self.addaccbutton)
         self.composer = QTextEdit(self)
         #self.composer.setPlaceholderText("いまなにしてる？")
-        self.composer.setMaximumHeight(100)
+        self.composer.setMaximumHeight(60)
 
         self.compose_hbox = QHBoxLayout()
         self.imagebutton = QPushButton("image", self)
@@ -95,6 +95,7 @@ class MyWindow(QWidget):
         l = QTextEdit()
         l.setPlainText(self.tweets[0])
         l.setReadOnly(True)
+        l.setFixedHeight(350)
         self.inner = QWidget()
         self.timeline_vbox = QVBoxLayout(self.inner)
         self.timeline_vbox.addWidget(l)
@@ -204,9 +205,18 @@ class MyWindow(QWidget):
     
     def create_tweet(self, t):
         text = "@" + t.user.screen_name + "\n" + t.text      
-        tweettext = QTextEdit()
-        tweettext.setPlainText(text)
+        tweetdocument = PyQt5.QtGui.QTextDocument()
+        tweetdocument.setTextWidth(300) #this line is not working so it needs to be fixed someday
+        tweetdocument.setPlainText(text)
+        tweettext = QTextEdit() 
+        tweettext.setDocument(tweetdocument)
         tweettext.setReadOnly(True)
+        tweettext.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        tweettext.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        tweettext.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        tweettext.setAttribute(103)
+        tweettext.show()
+        tweettext.setFixedHeight(tweettext.document().size().height() + tweettext.contentsMargins().top()*2)
         return tweettext
 
     def submit(self):
