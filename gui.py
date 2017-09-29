@@ -7,7 +7,7 @@ import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QGridLayout, QPushButton, QTextEdit, QScrollArea,
                              QLabel, QLineEdit, QSizePolicy)
-from PyQt5.QtCore import QTimer, QSize, QByteArray
+from PyQt5.QtCore import QTimer, QSize, QByteArray, Qt
 import PyQt5.QtGui
 import twitter
 
@@ -89,7 +89,6 @@ class MyWindow(QWidget):
         self.compose_vbox.addWidget(self.composer)
         self.compose_vbox.addLayout(self.compose_hbox)
         self.compose_vbox.addLayout(self.hashtag_hbox)
-        
 
         #lower half of main window consists of timeline
         l = QTextEdit()
@@ -131,14 +130,15 @@ class MyWindow(QWidget):
         if os.path.isfile("auth.json"):
             with open('auth.json', 'r') as f:
                 authdic = json.load(f)
-            for k, v in authdic["Twitter"].items():
-                api = twitter.connect(v["ACCESS_TOKEN"], v["ACCESS_SECRET"])
-                self.auths[k] = api
+            for name, keys in authdic["Twitter"].items():
+                api = twitter.connect(keys["ACCESS_TOKEN"], keys["ACCESS_SECRET"])
+                self.auths[name] = api
                 #self.following = self.following + api.friends_ids(k)
-                self.streams.append(twitter.open_userstream(api, self.receive_tweet, k))
-                if not os.path.isfile("images/"+k+".jpg"):
-                    twitter.getmyicon(api, k)
-            #twitter.open_filterstream(self.auths["XXXX"], self.receive_tweet, "XXXX", [str(x) for x in self.following])
+                self.streams.append(twitter.open_userstream(api, self.receive_tweet, name))
+                if not os.path.isfile("images/"+name+".jpg"):
+                    twitter.getmyicon(api, name)
+            #twitter.open_filterstream(self.auths["XXXX"], self.receive_tweet,
+            #  "XXXX", [str(x) for x in self.following])
         else:
             default = {
                 "Twitter"  : {},
@@ -194,7 +194,7 @@ class MyWindow(QWidget):
             if "media" in t.entities:
                 images = twitter.get_allimages(self.auths[name], t.id)
                 self.imagetext.setPlainText("@" + t.user.screen_name + "\n" + t.text)
-                for n in range(len(images)):
+                for n, _ in enumerate(images):
                     pixmap = PyQt5.QtGui.QPixmap()
                     pixmap.loadFromData(QByteArray(images[n]))
                     scaled = pixmap.scaled(QSize(320, 180), 1, 1)
@@ -202,21 +202,23 @@ class MyWindow(QWidget):
                     imageviewer.setPixmap(scaled)
                     self.imagegrid.addWidget(imageviewer, GRID_ORDER[n][0], GRID_ORDER[n][1])
         self.tweets = []
-    
+
     def create_tweet(self, t):
-        text = "@" + t.user.screen_name + "\n" + t.text      
+        """create tweet widget"""
+        text = "@" + t.user.screen_name + "\n" + t.text
         tweetdocument = PyQt5.QtGui.QTextDocument()
         tweetdocument.setTextWidth(300) #this line is not working so it needs to be fixed someday
         tweetdocument.setPlainText(text)
-        tweettext = QTextEdit() 
+        tweettext = QTextEdit()
         tweettext.setDocument(tweetdocument)
         tweettext.setReadOnly(True)
         tweettext.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        tweettext.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff) 
+        tweettext.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         tweettext.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         tweettext.setAttribute(103)
         tweettext.show()
-        tweettext.setFixedHeight(tweettext.document().size().height() + tweettext.contentsMargins().top()*2)
+        tweettext.setFixedHeight(tweettext.document().size().height()
+                                 + tweettext.contentsMargins().top()*2)
         return tweettext
 
     def submit(self):
@@ -229,6 +231,7 @@ class MyWindow(QWidget):
         self.composer.setPlainText("")
 
     def sethashtag(self):
+        """set hashtab for receive and tweet"""
         switch = self.sender()
         if switch.isChecked():
             htinput = self.hashtagedit.text()
