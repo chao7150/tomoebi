@@ -65,7 +65,7 @@ class MyWindow(QWidget):
         self.addaccbutton = QPushButton("+", self)
         self.addaccbutton.clicked.connect(self.add_account)
         self.accounts_hbox.addWidget(self.addaccbutton)
-        self.composer = QTextEdit(self)
+        self.composer = QTextEdit()
         #self.composer.setPlaceholderText("いまなにしてる？")
         self.composer.setMaximumHeight(60)
 
@@ -193,7 +193,7 @@ class MyWindow(QWidget):
             iconviewer = QLabel()
             iconviewer.setPixmap(scaled_icon)
             tweet_hbox = QHBoxLayout()
-            tweet_hbox.addWidget(iconviewer)
+            tweet_hbox.addWidget(iconviewer) 
             tweet_hbox.addWidget(tweet)
             self.timeline_vbox.insertLayout(0, tweet_hbox)
             if "media" in t.entities:
@@ -248,7 +248,6 @@ class MyWindow(QWidget):
                 else:
                     self.receivetags.append(t[1:])
             repl_screen_name = list(self.auths.keys())[0]
-            print(repl_screen_name)
             self.searchstream = twitter.open_filterstream(self.auths[repl_screen_name], self.receive_tweet, repl_screen_name, self.receivetags)
         else:
             self.receivetags = []
