@@ -111,11 +111,16 @@ class MyWindow(QWidget):
 
         #right half of the main window
         self.image_collumn = QVBoxLayout()
-        self.imagegrid = QGridLayout()
+        self.imageinner = QWidget()
+        self.imagetimeline = QVBoxLayout(self.imageinner)
+        self.imagescroll = QScrollArea()
+        self.imagescroll.setWidgetResizable(True)
+        self.imagescroll.setWidget(self.imageinner)
         self.imagetext = QTextEdit()
+        self.imagetext.setMaximumHeight(60)
         self.imagetext.setReadOnly(True)
         self.image_collumn.addWidget(self.imagetext)
-        self.image_collumn.addLayout(self.imagegrid)
+        self.image_collumn.addWidget(self.imagescroll)
 
         self.whole_hbox = QHBoxLayout()
         self.whole_hbox.addLayout(self.whole_vbox)
@@ -200,7 +205,7 @@ class MyWindow(QWidget):
                     scaled = pixmap.scaled(QSize(320, 180), 1, 1)
                     imageviewer = QLabel()
                     imageviewer.setPixmap(scaled)
-                    self.imagegrid.addWidget(imageviewer, GRID_ORDER[n][0], GRID_ORDER[n][1])
+                    self.imagetimeline.insertWidget(0, imageviewer)
         self.tweets = []
 
     def create_tweet(self, t):
