@@ -178,24 +178,28 @@ class MyWindow(QWidget):
         else:
             self.activeaccounts.remove(acc.whatsThis())
 
-    def receive_tweet(self, status, name):
+    def receive_tweet(self, status, name, icon):
         """called when stream receive a tweet"""
-        self.tweets.append((status, name))
+        self.tweets.append((status, name, icon))
 
     def update_timeline(self):
         """called every 500ms and update gui timeline according to self.tweets"""
-        for t, name in self.tweets:
+        for t, name, icon in self.tweets:
             tweet = self.create_tweet(t)
-            if not os.path.isfile("images/" + t.user.screen_name + ".jpg"):
-                twitter.geticon(t.user.profile_image_url_https, t.user.screen_name)
-            icon = PyQt5.QtGui.QPixmap("images/" + t.user.screen_name + ".jpg")
-            scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
-            iconviewer = QLabel()
-            iconviewer.setPixmap(scaled_icon)
             tweet_hbox = QHBoxLayout()
-            tweet_hbox.addWidget(iconviewer) 
+            if icon:
+                if not os.path.isfile("images/" + t.user.screen_name + ".jpg"):
+                    twitter.geticon(t.user.profile_image_url_https, t.user.screen_name)
+                icon = PyQt5.QtGui.QPixmap("images/" + t.user.screen_name + ".jpg")
+                scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
+                iconviewer = QLabel()
+                iconviewer.setPixmap(scaled_icon)
+                tweet_hbox.addWidget(iconviewer) 
             tweet_hbox.addWidget(tweet)
             self.timeline_vbox.insertLayout(0, tweet_hbox)
+            #not working yet
+            if self.timeline_vbox.count() > 5:
+                self.timeline_vbox.removeItem(self.timeline_vbox.itemAt(self.timeline_vbox.count()))
             if "media" in t.entities:
                 images = twitter.get_allimages(self.auths[name], t.id)
                 self.imagetext.setPlainText("@" + t.user.screen_name + "\n" + t.text)
