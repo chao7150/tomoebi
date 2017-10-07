@@ -8,14 +8,19 @@ from PyQt5.QtWidgets import QInputDialog
 
 class StreamListener(tweepy.StreamListener):
     """receive streaming and classify messages"""
-    def __init__(self, name, callback):
+    def __init__(self, name, callback, RTfilter, icon):
         super(StreamListener, self).__init__()
         self.callback = callback
         self.name = name
+        self.RTfilter = RTfilter
+        self.icon = icon
 
     def on_status(self, status):
         """send tweets to main gui"""
-        self.callback(status, self.name)
+        if self.RTfilter and status.text[0:2] == "RT":
+            return
+        else:
+            self.callback(status, self.name, self.icon)
 
     def on_error(self, status_code):
         """print error code when receive error"""
@@ -29,12 +34,12 @@ def open_userstream(api, callback, name):
     create and start stream with async mode which enables parallel
     processing of gui event loop and stream wait loop
     """
-    stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback))
+    stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback, False, True))
     stream.userstream(async=True)
     return stream
 
 def open_filterstream(api, callback, name, query):
-    stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback))
+    stream = tweepy.Stream(auth=api.auth, listener=StreamListener(name, callback, True, False))
     stream.filter(track=query, async=True)
     return stream
 
