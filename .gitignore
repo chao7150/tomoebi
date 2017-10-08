@@ -4,3 +4,6 @@ auth.json
 __pycache__
 images/
 gui.spec
+build
+dist
+tomoebi.spec

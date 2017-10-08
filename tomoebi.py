@@ -11,8 +11,6 @@ from PyQt5.QtCore import QTimer, QSize, QByteArray, Qt
 import PyQt5.QtGui
 import twitter
 
-GRID_ORDER = [(0, 0), (0, 1), (1, 0), (1, 1)]
-
 class MyWindow(QWidget):
     """main window"""
     def __init__(self):
@@ -185,6 +183,10 @@ class MyWindow(QWidget):
     def update_timeline(self):
         """called every 500ms and update gui timeline according to self.tweets"""
         for t, name, icon in self.tweets:
+            rtby = None
+            if hasattr(t, "retweeted_status"):
+                rtby = [t.user.profile_image_url_https, t.user.screen_name]
+                t = t.retweeted_status
             tweet = self.create_tweet(t)
             tweet_hbox = QHBoxLayout()
             if icon:
@@ -194,12 +196,29 @@ class MyWindow(QWidget):
                 scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
                 iconviewer = QLabel()
                 iconviewer.setPixmap(scaled_icon)
-                tweet_hbox.addWidget(iconviewer) 
+                icon_vbox = QVBoxLayout()
+                icon_vbox.addWidget(iconviewer, alignment=Qt.AlignTop)
+                if rtby:
+                    if not os.path.isfile("images/" + rtby[1] + ".jpg"):
+                        twitter.geticon(*rtby)
+                    icon = PyQt5.QtGui.QPixmap("images/" + rtby[1] + ".jpg")
+                    scaled_icon = icon.scaled(QSize(24, 24), 1, 1)
+                    rticonviewer = QLabel()
+                    rticonviewer.setPixmap(scaled_icon)
+                    rticon_hbox = QHBoxLayout()
+                    #rticon_hbox.addStretch()
+                    rticon_hbox.addWidget(rticonviewer, alignment=(Qt.AlignRight|Qt.AlignTop))
+                    icon_vbox.addLayout(rticon_hbox)
+                    icon_vbox.addStretch()      
+                tweet_hbox.addLayout(icon_vbox) 
             tweet_hbox.addWidget(tweet)
             self.timeline_vbox.insertLayout(0, tweet_hbox)
             #not working yet
-            if self.timeline_vbox.count() > 5:
-                self.timeline_vbox.removeItem(self.timeline_vbox.itemAt(self.timeline_vbox.count()))
+            '''print(self.timeline_vbox.count())
+            if self.timeline_vbox.count() > 15:
+                deleteitem = self.timeline_vbox.itemAt(self.timeline_vbox.count() - 1)
+                print(deleteitem)
+                self.timeline_vbox.removeItem(deleteitem)'''
             if "media" in t.entities:
                 images = twitter.get_allimages(self.auths[name], t.id)
                 self.imagetext.setPlainText("@" + t.user.screen_name + "\n" + t.text)
