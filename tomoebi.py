@@ -263,16 +263,17 @@ class MyWindow(QWidget):
             self.auths[a].update_status(submittext)
         self.composer.setPlainText("")
 
-    def fav(self, id, name):
+    def fav(self, tweetid, name):
+        '''favor or unfavor a tweet from an account from which the tweet was obtained'''
         switch = self.sender()
         if switch.isChecked():
             try:
-                self.auths[name].create_favorite(id)
+                self.auths[name].create_favorite(tweetid)
             except:
                 print("already favored")
         else:
             try:
-                self.auths[name].destroy_favorite(id)
+                self.auths[name].destroy_favorite(tweetid)
             except:
                 print("not favored")
 
