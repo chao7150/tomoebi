@@ -5,7 +5,7 @@ import sys
 import os
 import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-                             QGridLayout, QPushButton, QTextEdit, QScrollArea,
+                             QPushButton, QTextEdit, QScrollArea,
                              QLabel, QLineEdit, QSizePolicy)
 from PyQt5.QtCore import QTimer, QSize, QByteArray, Qt
 import PyQt5.QtGui
@@ -209,9 +209,14 @@ class MyWindow(QWidget):
                     #rticon_hbox.addStretch()
                     rticon_hbox.addWidget(rticonviewer, alignment=(Qt.AlignRight|Qt.AlignTop))
                     icon_vbox.addLayout(rticon_hbox)
-                    icon_vbox.addStretch()      
-                tweet_hbox.addLayout(icon_vbox) 
+                    icon_vbox.addStretch()
+                tweet_hbox.addLayout(icon_vbox)
             tweet_hbox.addWidget(tweet)
+            favbutton = QPushButton("fav")
+            favbutton.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+            favbutton.setCheckable(True)
+            favbutton.toggled.connect(lambda: self.fav(t.id, name))
+            tweet_hbox.addWidget(favbutton)
             self.timeline_vbox.insertLayout(0, tweet_hbox)
             #not working yet
             '''print(self.timeline_vbox.count())
@@ -258,6 +263,19 @@ class MyWindow(QWidget):
             self.auths[a].update_status(submittext)
         self.composer.setPlainText("")
 
+    def fav(self, id, name):
+        switch = self.sender()
+        if switch.isChecked():
+            try:
+                self.auths[name].create_favorite(id)
+            except:
+                print("already favored")
+        else:
+            try:
+                self.auths[name].destroy_favorite(id)
+            except:
+                print("not favored")
+
     def sethashtag(self):
         """set hashtab for receive and tweet"""
         switch = self.sender()
@@ -271,7 +289,9 @@ class MyWindow(QWidget):
                 else:
                     self.receivetags.append(t[1:])
             repl_screen_name = list(self.auths.keys())[0]
-            self.searchstream = twitter.open_filterstream(self.auths[repl_screen_name], self.receive_tweet, repl_screen_name, self.receivetags)
+            self.searchstream = twitter.open_filterstream(
+                self.auths[repl_screen_name], self.receive_tweet, repl_screen_name, self.receivetags
+                )
         else:
             self.receivetags = []
             self.tweettags = []
