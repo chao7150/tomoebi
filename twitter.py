@@ -4,6 +4,7 @@ import webbrowser
 import json
 import tweepy
 import requests
+import re
 from PyQt5.QtWidgets import QInputDialog
 
 class StreamListener(tweepy.StreamListener):
@@ -88,9 +89,23 @@ def getmyicon(api, screen_name):
 def geticon(url, screen_name):
     response = requests.get(url, allow_redirects=False)
     image = response.content
-    imagename = 'images/' + screen_name + '.jpg'
+    ext = which_ext(image)
+    imagename = 'images/' + screen_name + ext
     with open(imagename, 'wb') as f:
         f.write(image)
+    return imagename
+
+def which_ext(image):
+    '''check image format
+    thanks to http://xaro.hatenablog.jp/entry/2017/05/17/103000'''
+    if re.match(b"^\xff\xd8", image[:2]):
+        return ".jpg"
+    elif re.match(b"^\x89\x50\x4e\x47\x0d\x0a\x1a\x0a", image[:8]):
+        return ".png"
+    elif re.match(b"^\x47\x49\x46\x38", image[:4]):
+        return ".gif"
+    else:
+        print(image)
     
 def get_allimages(api, id):
     status = api.get_status(id)

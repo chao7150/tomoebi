@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtCore import QTimer, QSize, QByteArray, Qt
 import PyQt5.QtGui
 import twitter
+import glob
 
 class MyWindow(QWidget):
     """main window"""
@@ -190,18 +191,18 @@ class MyWindow(QWidget):
             tweet = self.create_tweet(t)
             tweet_hbox = QHBoxLayout()
             if icon:
-                if not os.path.isfile("images/" + t.user.screen_name + ".jpg"):
+                if not glob.glob("images/" + t.user.screen_name + ".*"):
                     twitter.geticon(t.user.profile_image_url_https, t.user.screen_name)
-                icon = PyQt5.QtGui.QPixmap("images/" + t.user.screen_name + ".jpg")
+                icon = PyQt5.QtGui.QPixmap(glob.glob("images/" + t.user.screen_name + ".*")[0])
                 scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
                 iconviewer = QLabel()
                 iconviewer.setPixmap(scaled_icon)
                 icon_vbox = QVBoxLayout()
                 icon_vbox.addWidget(iconviewer, alignment=Qt.AlignTop)
                 if rtby:
-                    if not os.path.isfile("images/" + rtby[1] + ".jpg"):
+                    if not glob.glob("images/" + rtby[1] + ".*"):
                         twitter.geticon(*rtby)
-                    icon = PyQt5.QtGui.QPixmap("images/" + rtby[1] + ".jpg")
+                    icon = PyQt5.QtGui.QPixmap(glob.glob("images/" + rtby[1] + ".*")[0])
                     scaled_icon = icon.scaled(QSize(24, 24), 1, 1)
                     rticonviewer = QLabel()
                     rticonviewer.setPixmap(scaled_icon)
