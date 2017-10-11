@@ -5,12 +5,30 @@ import sys
 import os
 import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QTextEdit, QScrollArea,
+                             QPushButton, QTextEdit, QScrollArea, QMenu,
                              QLabel, QLineEdit, QSizePolicy)
 from PyQt5.QtCore import QTimer, QSize, QByteArray, Qt
 import PyQt5.QtGui
 import twitter
 import glob
+
+class IconLabel(QLabel):
+    def __init__(self, id, account, RTcallback, replycallback):
+        QLabel.__init__(self)
+        self.id = id
+        self.account = account
+        self.RTcallback = RTcallback
+        self.replycallback = replycallback
+
+    def contextMenuEvent(self, event):
+        menu = QMenu()
+        rtAction = menu.addAction("RT")
+        replyAction = menu.addAction("Reply")
+        action = menu.exec_(self.mapToGlobal(event.pos()))
+        if action == rtAction:
+            self.RTcallback(self.id, self.account)
+        elif action == replyAction:
+            self.replycallback(self.id, self.account)
 
 class MyWindow(QWidget):
     """main window"""
@@ -195,7 +213,7 @@ class MyWindow(QWidget):
                     twitter.geticon(t.user.profile_image_url_https, t.user.screen_name)
                 icon = PyQt5.QtGui.QPixmap(glob.glob("images/" + t.user.screen_name + ".*")[0])
                 scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
-                iconviewer = QLabel()
+                iconviewer = IconLabel(t.id, name, self.retweet, self.reply)
                 iconviewer.setPixmap(scaled_icon)
                 icon_vbox = QVBoxLayout()
                 icon_vbox.addWidget(iconviewer, alignment=Qt.AlignTop)
@@ -257,9 +275,13 @@ class MyWindow(QWidget):
 
     def submit(self):
         """called when tweet button is pressed and submit tweet"""
+        if not self.activeaccounts:
+            return
         submittext = self.composer.toPlainText()
         for t in self.tweettags:
             submittext = submittext + " " + t
+        if not submittext:
+            return
         for a in self.activeaccounts:
             self.auths[a].update_status(submittext)
         self.composer.setPlainText("")
@@ -277,6 +299,18 @@ class MyWindow(QWidget):
                 self.auths[name].destroy_favorite(tweetid)
             except:
                 print("not favored")
+    
+    def retweet(self, id, account):
+        self.auths[account].retweet(id)
+
+    def reply(self, id, account):
+        if not self.activeaccounts:
+            return
+        submittext = self.composer.toPlainText()
+        if not submittext:
+            return
+        self.auths[account].update_status(submittext, in_reply_to_status_id=id, auto_populate_reply_metadata=True)
+        self.composer.setPlainText("")
 
     def sethashtag(self):
         """set hashtab for receive and tweet"""
