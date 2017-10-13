@@ -13,6 +13,10 @@ import twitter
 import glob
 
 class IconLabel(QLabel):
+    '''
+    new class which inherits QLabel
+    contextMenuEvent was reimplemented so as to create right click menu to RT and reply
+    '''
     def __init__(self, id, account, RTcallback, replycallback):
         QLabel.__init__(self)
         self.id = id
@@ -29,6 +33,21 @@ class IconLabel(QLabel):
             self.RTcallback(self.id, self.account)
         elif action == replyAction:
             self.replycallback(self.id, self.account)
+
+class ComposeTextEdit(QTextEdit):
+    '''
+    new class which ingerits QTextEdit
+    keyPressEvent was reimplemented so as to handle Ctrl + Enter shortcut for post
+    '''
+    def __init__(self, parent):
+        QTextEdit.__init__(self)
+        self.parent = parent
+
+    def keyPressEvent(self, e):
+        if e.modifiers() == Qt.ControlModifier and (e.key() == Qt.Key_Return or e.key() == Qt.Key_Enter):
+            self.parent.submit()
+        else:
+            QTextEdit.keyPressEvent(self, e)
 
 class MyWindow(QWidget):
     """main window"""
@@ -76,13 +95,14 @@ class MyWindow(QWidget):
             accbutton.setWhatsThis(a)
             accbutton.setCheckable(True)
             accbutton.toggled.connect(self.choose_account)
+            accbutton.setChecked(True)
             accbutton.setIcon(PyQt5.QtGui.QIcon('images/'+a+'.jpg'))
             accbutton.setIconSize(QSize(48, 48))
             self.accounts_hbox.addWidget(accbutton)
         self.addaccbutton = QPushButton("+", self)
         self.addaccbutton.clicked.connect(self.add_account)
         self.accounts_hbox.addWidget(self.addaccbutton)
-        self.composer = QTextEdit()
+        self.composer = ComposeTextEdit(self)
         #self.composer.setPlaceholderText("いまなにしてる？")
         self.composer.setMaximumHeight(60)
 
