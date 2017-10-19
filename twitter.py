@@ -22,6 +22,9 @@ class StreamListener(tweepy.StreamListener):
             return
         else:
             self.callback(status, self.name, self.icon)
+    
+    def on_event(self, status):
+        self.callback(status, self.name, self.icon)
 
     def on_error(self, status_code):
         """print error code when receive error"""

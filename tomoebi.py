@@ -221,59 +221,65 @@ class MyWindow(QWidget):
 
     def update_timeline(self):
         """called every 500ms and update gui timeline according to self.tweets"""
-        for t, name, icon in self.tweets:
-            rtby = None
-            if hasattr(t, "retweeted_status"):
-                rtby = [t.user.profile_image_url_https, t.user.screen_name]
-                t = t.retweeted_status
-            tweet = self.create_tweet(t)
-            tweet_hbox = QHBoxLayout()
-            if icon:
-                if not glob.glob("images/" + t.user.screen_name + ".*"):
-                    twitter.geticon(t.user.profile_image_url_https, t.user.screen_name)
-                icon = PyQt5.QtGui.QPixmap(glob.glob("images/" + t.user.screen_name + ".*")[0])
-                scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
-                iconviewer = IconLabel(t.id, name, self.retweet, self.reply)
-                iconviewer.setPixmap(scaled_icon)
-                icon_vbox = QVBoxLayout()
-                icon_vbox.addWidget(iconviewer, alignment=Qt.AlignTop)
-                if rtby:
-                    if not glob.glob("images/" + rtby[1] + ".*"):
-                        twitter.geticon(*rtby)
-                    icon = PyQt5.QtGui.QPixmap(glob.glob("images/" + rtby[1] + ".*")[0])
-                    scaled_icon = icon.scaled(QSize(24, 24), 1, 1)
-                    rticonviewer = QLabel()
-                    rticonviewer.setPixmap(scaled_icon)
-                    rticon_hbox = QHBoxLayout()
-                    #rticon_hbox.addStretch()
-                    rticon_hbox.addWidget(rticonviewer, alignment=(Qt.AlignRight|Qt.AlignTop))
-                    icon_vbox.addLayout(rticon_hbox)
-                    icon_vbox.addStretch()
-                tweet_hbox.addLayout(icon_vbox)
-            tweet_hbox.addWidget(tweet)
-            favbutton = QPushButton("fav")
-            favbutton.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
-            favbutton.setCheckable(True)
-            favbutton.toggled.connect(lambda: self.fav(t.id, name))
-            tweet_hbox.addWidget(favbutton)
-            self.timeline_vbox.insertLayout(0, tweet_hbox)
-            #not working yet
-            '''print(self.timeline_vbox.count())
-            if self.timeline_vbox.count() > 15:
-                deleteitem = self.timeline_vbox.itemAt(self.timeline_vbox.count() - 1)
-                print(deleteitem)
-                self.timeline_vbox.removeItem(deleteitem)'''
-            if "media" in t.entities:
-                images = twitter.get_allimages(self.auths[name], t.id)
-                self.imagetext.setPlainText("@" + t.user.screen_name + "\n" + t.text)
-                for n, _ in enumerate(images):
-                    pixmap = PyQt5.QtGui.QPixmap()
-                    pixmap.loadFromData(QByteArray(images[n]))
-                    scaled = pixmap.scaled(QSize(320, 180), 1, 1)
-                    imageviewer = QLabel()
-                    imageviewer.setPixmap(scaled)
-                    self.imagetimeline.insertWidget(0, imageviewer)
+        for t in self.tweets:
+            if hasattr(t[0], "in_reply_to_status_id"):
+                self.addTweet(*t)
+            elif hasattr(t[0], "event"):
+                self.addEvent(*t)
         self.tweets = []
+
+    def addTweet(self, t, name, icon):
+        rtby = None
+        if hasattr(t, "retweeted_status"):
+            rtby = [t.user.profile_image_url_https, t.user.screen_name]
+            t = t.retweeted_status
+        tweet = self.create_tweet(t)
+        tweet_hbox = QHBoxLayout()
+        if icon:
+            if not glob.glob("images/" + t.user.screen_name + ".*"):
+                twitter.geticon(t.user.profile_image_url_https, t.user.screen_name)
+            icon = PyQt5.QtGui.QPixmap(glob.glob("images/" + t.user.screen_name + ".*")[0])
+            scaled_icon = icon.scaled(QSize(48, 48), 1, 1)
+            iconviewer = IconLabel(t.id, name, self.retweet, self.reply)
+            iconviewer.setPixmap(scaled_icon)
+            icon_vbox = QVBoxLayout()
+            icon_vbox.addWidget(iconviewer, alignment=Qt.AlignTop)
+            if rtby:
+                if not glob.glob("images/" + rtby[1] + ".*"):
+                    twitter.geticon(*rtby)
+                icon = PyQt5.QtGui.QPixmap(glob.glob("images/" + rtby[1] + ".*")[0])
+                scaled_icon = icon.scaled(QSize(24, 24), 1, 1)
+                rticonviewer = QLabel()
+                rticonviewer.setPixmap(scaled_icon)
+                rticon_hbox = QHBoxLayout()
+                #rticon_hbox.addStretch()
+                rticon_hbox.addWidget(rticonviewer, alignment=(Qt.AlignRight|Qt.AlignTop))
+                icon_vbox.addLayout(rticon_hbox)
+                icon_vbox.addStretch()
+            tweet_hbox.addLayout(icon_vbox)
+        tweet_hbox.addWidget(tweet)
+        favbutton = QPushButton("fav")
+        favbutton.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        favbutton.setCheckable(True)
+        favbutton.toggled.connect(lambda: self.fav(t.id, name))
+        tweet_hbox.addWidget(favbutton)
+        self.timeline_vbox.insertLayout(0, tweet_hbox)
+        if "media" in t.entities:
+            images = twitter.get_allimages(self.auths[name], t.id)
+            self.imagetext.setPlainText("@" + t.user.screen_name + "\n" + t.text)
+            for n, _ in enumerate(images):
+                pixmap = PyQt5.QtGui.QPixmap()
+                pixmap.loadFromData(QByteArray(images[n]))
+                scaled = pixmap.scaled(QSize(320, 180), 1, 1)
+                imageviewer = QLabel()
+                imageviewer.setPixmap(scaled)
+                self.imagetimeline.insertWidget(0, imageviewer)
+    
+    def addEvent(self, t, name, icon):
+        if t.event == "favorite" and not (t.source["screen_name"] in self.auths.keys()):
+            text = t.source["screen_name"] + " favored " + t.target_object["text"]
+            favLabel = QLabel(text)
+            self.timeline_vbox.insertWidget(0, favLabel)
 
     def create_tweet(self, t):
         """create tweet widget"""
