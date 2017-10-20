@@ -107,6 +107,8 @@ def which_ext(image):
         return ".png"
     elif re.match(b"^\x47\x49\x46\x38", image[:4]):
         return ".gif"
+    elif re.match(b"^\x42\x4d", image[:2]):
+        return ".bmp"
     else:
         print(image)
     
