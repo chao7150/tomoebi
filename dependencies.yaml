@@ -17,7 +17,6 @@ dependencies:
 - pycparser=2.18=py36_0
 - pycrypto=2.6.1=py36_1
 - pyflakes=1.5.0=py36_0
-- pyinstaller=3.2.1=py36_0
 - pyjwt=1.5.2=py36_0
 - pysocks=1.6.7=py36_0
 - requests=2.13.0=py36_0
