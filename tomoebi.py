@@ -77,7 +77,7 @@ class MyWindow(QWidget):
         self.setWindowTitle("tomoebi")
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_timeline)
-        self.timer.start(500)
+        self.timer.start(1000)
 
     def init_tweets(self):
         """create initial tweet"""
@@ -163,6 +163,9 @@ class MyWindow(QWidget):
         self.whole_hbox.addLayout(self.whole_vbox)
         self.whole_hbox.addLayout(self.image_collumn)
         self.setLayout(self.whole_hbox)
+
+        self.favicon = QLabel()
+        self.favicon.setPixmap(PyQt5.QtGui.QPixmap("resource/fav.png"))
 
     #initialize registered accounts
     def init_accounts(self):
@@ -276,10 +279,17 @@ class MyWindow(QWidget):
                 self.imagetimeline.insertWidget(0, imageviewer)
     
     def addEvent(self, t, name, icon):
-        if t.event == "favorite" and not (t.source["screen_name"] in self.auths.keys()):
-            text = t.source["screen_name"] + " favored " + t.target_object["text"]
-            favLabel = QLabel(text)
-            self.timeline_vbox.insertWidget(0, favLabel)
+        if t.event == "favorite":# and not (t.source["screen_name"] in self.auths.keys()):
+            norti_hbox = QHBoxLayout()
+            norti_hbox.addWidget(self.favicon, alignment=Qt.AlignLeft)
+            if not glob.glob("images/" + t.source["screen_name"] + ".*"):
+                twitter.geticon(t.source["profile_image_url_https"], t.source["screen_name"])
+            icon = QLabel()
+            icon.setPixmap(PyQt5.QtGui.QPixmap(glob.glob("images/" + t.source["screen_name"] + ".*")[0]).scaled(QSize(24, 24), 1, 1))
+            norti_hbox.addWidget(icon, alignment=Qt.AlignLeft)
+            text = QLabel(t.target_object["text"])
+            norti_hbox.addWidget(text, alignment=Qt.AlignLeft)
+            self.timeline_vbox.insertLayout(0, norti_hbox)
 
     def create_tweet(self, t):
         """create tweet widget"""
