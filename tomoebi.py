@@ -3,6 +3,7 @@
 
 import sys
 import os
+import copy
 import json
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QTextEdit, QScrollArea, QMenu,
@@ -129,6 +130,8 @@ class MyWindow(QWidget):
 
         #lower half of main window consists of timeline
         l = QTextEdit()
+        l.sizeHint = QSize()
+        l.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         l.setPlainText(self.tweets[0])
         l.setReadOnly(True)
         l.setFixedHeight(350)
@@ -148,6 +151,7 @@ class MyWindow(QWidget):
 
         #right half of the main window
         self.image_collumn = QVBoxLayout()
+        self.image_collumn.setSizeConstraint(1)
         self.imageinner = QWidget()
         self.imagetimeline = QVBoxLayout(self.imageinner)
         self.imagescroll = QScrollArea()
@@ -164,8 +168,7 @@ class MyWindow(QWidget):
         self.whole_hbox.addLayout(self.image_collumn)
         self.setLayout(self.whole_hbox)
 
-        self.favicon = QLabel()
-        self.favicon.setPixmap(PyQt5.QtGui.QPixmap("resource/fav.png"))
+        self.favpixmap = PyQt5.QtGui.QPixmap("resource/fav.png")
 
     #initialize registered accounts
     def init_accounts(self):
@@ -279,16 +282,23 @@ class MyWindow(QWidget):
                 self.imagetimeline.insertWidget(0, imageviewer)
     
     def addEvent(self, t, name, icon):
-        if t.event == "favorite":# and not (t.source["screen_name"] in self.auths.keys()):
+        if t.event == "favorite" and not (t.source["screen_name"] in self.auths.keys()):
             norti_hbox = QHBoxLayout()
-            norti_hbox.addWidget(self.favicon, alignment=Qt.AlignLeft)
+            favlabel = QLabel()
+            favlabel.setPixmap(self.favpixmap)
+            norti_hbox.addWidget(favlabel, alignment=Qt.AlignLeft)
             if not glob.glob("images/" + t.source["screen_name"] + ".*"):
                 twitter.geticon(t.source["profile_image_url_https"], t.source["screen_name"])
             icon = QLabel()
             icon.setPixmap(PyQt5.QtGui.QPixmap(glob.glob("images/" + t.source["screen_name"] + ".*")[0]).scaled(QSize(24, 24), 1, 1))
             norti_hbox.addWidget(icon, alignment=Qt.AlignLeft)
-            text = QLabel(t.target_object["text"])
-            norti_hbox.addWidget(text, alignment=Qt.AlignLeft)
+            if len(t.target_object["text"]) > 30:
+                text = t.target_object["text"][0:30].replace('\n', '')+"..."
+            else:
+                text = t.target_object["text"].replace('\n', '')
+            textlabel = QLabel(text)
+            norti_hbox.addWidget(textlabel, alignment=Qt.AlignLeft)
+            norti_hbox.addStretch()
             self.timeline_vbox.insertLayout(0, norti_hbox)
 
     def create_tweet(self, t):
